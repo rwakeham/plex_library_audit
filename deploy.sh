@@ -55,10 +55,12 @@ if [[ ! -f .env ]]; then
   error ".env not found — run ./setup.sh first"
   exit 1
 fi
-if [[ -z "$(_env_get PLEX_TOKEN)" ]]; then
-  error "PLEX_TOKEN is not set in .env — run ./setup.sh"
-  exit 1
-fi
+for key in PLEX_TOKEN PLEX_BASE_URL; do
+  if [[ -z "$(_env_get "$key")" ]]; then
+    error "${key} is not set in .env — run ./setup.sh"
+    exit 1
+  fi
+done
 PORT="$(_env_get PORT)"
 PORT="${PORT:-8300}"
 

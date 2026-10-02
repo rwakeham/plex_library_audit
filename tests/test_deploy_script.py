@@ -34,7 +34,7 @@ import os, re, shlex, shutil, subprocess, sys, tempfile
 ENV_TEXT = "PLEX_TOKEN=tok\nPLEX_BASE_URL=http://127.0.0.1:32400\nPORT=8300\nCACHE_TTL=300\n"
 # A .env that lacks the optional keys, to prove a missing key is not an abort.
 # Keep only what deploy.sh genuinely cannot run without.
-ENV_MINIMAL = "PLEX_TOKEN=tok\n"
+ENV_MINIMAL = "PLEX_TOKEN=tok\nPLEX_BASE_URL=http://127.0.0.1:32400\n"
 # Repo files deploy.sh reads besides itself (compose file, config it greps, ...).
 EXTRA_FILES = []
 # What the curl shim prints, for health checks that inspect the body.

@@ -16,7 +16,7 @@ INTERSTELLAR = {
     "contentRating": "PG-13", "duration": 10140000, "addedAt": 1716593622,
     "Genre": [{"tag": "Adventure"}, {"tag": "Drama"}, {"tag": "Science Fiction"}],
     "Media": [{"videoResolution": "4k", "videoCodec": "hevc", "Part": [
-        {"file": "/mnt/alexandria/Movies/Interstellar.mkv", "size": 21229500651}]}],
+        {"file": "/media/Movies/Interstellar.mkv", "size": 21229500651}]}],
 }
 # One version split across two files: must count as one version, not a duplicate.
 TEN_COMMANDMENTS = {
@@ -47,7 +47,7 @@ def test_movie_matches_documented_schema():
         "r": 72, "a": 86, "cr": "PG-13", "g": ["Adventure", "Drama", "Science Fiction"],
         "dur": 169, "added": 1716593622, "vc": 0, "sz": 21229500651,
         "v": [{"res": "4k", "cd": "hevc", "sz": 21229500651, "files": [
-            {"p": "/mnt/alexandria/Movies/Interstellar.mkv", "sz": 21229500651}]}],
+            {"p": "/media/Movies/Interstellar.mkv", "sz": 21229500651}]}],
     }
 
 
