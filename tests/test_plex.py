@@ -177,3 +177,10 @@ def test_index_served(client):
     assert r.status_code == 200
     assert "fetch('/api/library'" in r.text
     assert "const DATA = [" not in r.text
+
+
+def test_icons_served(client):
+    r = client.get("/icon.svg")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml")
+    r = client.get("/apple-touch-icon.png")
+    assert r.status_code == 200 and r.content[:8] == b"\x89PNG\r\n\x1a\n"

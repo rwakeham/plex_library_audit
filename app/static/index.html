@@ -4,16 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Library Audit</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2213%22 font-size=%2213%22>🎞️</text></svg>">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#1F1F1F">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#15171C; --surface:#1B1E25; --surface2:#20242C; --border:#2B303A;
-    --text:#E9E6DF; --text-dim:#9BA1AD; --text-faint:#6B7280;
-    --gold:#C9A338; --gold-dim:#8F7527;
-    --teal:#56B7AA; --teal-dim:#3C7F76;
+    /* From the app icon: #1F1F1F ground, #E5A00D gold, #F5C04A amber, #3A3C40 slate */
+    --bg:#1F1F1F; --surface:#262626; --surface2:#2E2F33; --border:#3A3C40;
+    --text:#ECEAE6; --text-dim:#A3A5AB; --text-faint:#707278;
+    --gold:#E5A00D; --gold-dim:#A87406;
+    --amber:#F5C04A; --amber-dim:#B88B2A;
     --rust:#C2593F; --rust-dim:#8A3F2C;
     --radius:10px;
     --serif:'Fraunces', Georgia, 'Times New Roman', serif;
@@ -23,14 +26,16 @@
   }
   :root:not([data-theme="light"]){ }
   :root[data-theme="light"]{
-    --bg:#F4F2EC; --surface:#FFFFFF; --surface2:#ECE9E1;
-    --border:#DDD8CB; --text:#201D16; --text-dim:#5C574A; --text-faint:#8B8575;
+    --bg:#F5F4F1; --surface:#FFFFFF; --surface2:#ECEBE7;
+    --border:#DCDAD4; --text:#1F1F1F; --text-dim:#55565B; --text-faint:#85868B;
+    --gold:#B57A00; --gold-dim:#E5A00D; --amber:#9A7414; --amber-dim:#F5C04A;
     color-scheme: light;
   }
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
-      --bg:#F4F2EC; --surface:#FFFFFF; --surface2:#ECE9E1;
-      --border:#DDD8CB; --text:#201D16; --text-dim:#5C574A; --text-faint:#8B8575;
+      --bg:#F5F4F1; --surface:#FFFFFF; --surface2:#ECEBE7;
+      --border:#DCDAD4; --text:#1F1F1F; --text-dim:#55565B; --text-faint:#85868B;
+      --gold:#B57A00; --gold-dim:#E5A00D; --amber:#9A7414; --amber-dim:#F5C04A;
       color-scheme: light;
     }
   }
@@ -43,7 +48,7 @@
   }
   html{scroll-padding-top:env(safe-area-inset-top,0px);}
   a{color:inherit;}
-  ::selection{background:var(--gold); color:#15171C;}
+  ::selection{background:var(--gold); color:#1F1F1F;}
 
   .shell{display:flex; min-height:100vh; min-height:100%;}
 
@@ -53,8 +58,8 @@
     display:flex; flex-direction:column; padding:20px 16px;
     padding-top:calc(20px + env(safe-area-inset-top,0px));
   }
-  .brand{display:flex; align-items:baseline; gap:8px; margin-bottom:4px;}
-  .brand-mark{font-size:20px;}
+  .brand{display:flex; align-items:center; gap:9px; margin-bottom:4px;}
+  .brand-mark{width:26px; height:26px; flex:none; display:block;}
   .brand-name{font-family:var(--serif); font-weight:600; font-size:18px; letter-spacing:.2px;}
   .brand-sub{color:var(--text-faint); font-size:11.5px; margin-bottom:20px;}
 
@@ -125,7 +130,7 @@
   .bar-row .lbl{color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .bar-track{background:var(--surface2); border-radius:5px; height:9px; overflow:hidden;}
   .bar-fill{height:100%; border-radius:5px; background:linear-gradient(90deg, var(--gold-dim), var(--gold));}
-  .bar-fill.teal{background:linear-gradient(90deg, var(--teal-dim), var(--teal));}
+  .bar-fill.amber{background:linear-gradient(90deg, var(--amber-dim), var(--amber));}
   .bar-fill.rust{background:linear-gradient(90deg, var(--rust-dim), var(--rust));}
   .bar-row .val{font-family:var(--mono); color:var(--text-dim); text-align:right; font-size:11.5px;}
 
@@ -160,7 +165,7 @@
   td.title-cell .sh{color:var(--text-faint); font-size:11px;}
   td.mono{font-family:var(--mono); color:var(--text-dim); white-space:nowrap;}
   .badge{display:inline-block; font-size:10.5px; font-family:var(--mono); padding:2px 6px; border-radius:4px; margin-right:3px; white-space:nowrap;}
-  .badge.res4k{background:rgba(201,163,56,.18); color:var(--gold);}
+  .badge.res4k{background:rgba(229,160,13,.18); color:var(--gold);}
   .badge.res1080{background:rgba(155,161,173,.15); color:var(--text-dim);}
   .badge.reslo{background:rgba(194,89,63,.16); color:var(--rust);}
   .badge.dup{background:rgba(194,89,63,.18); color:var(--rust); cursor:help;}
@@ -199,11 +204,11 @@
   .dup-versions{display:grid; gap:5px;}
   .dup-v{display:grid; grid-template-columns:70px 70px 1fr 70px; gap:8px; font-size:11.5px; align-items:center;
          padding:5px 8px; border-radius:5px; background:var(--surface2);}
-  .dup-v.keep{outline:1px solid var(--teal-dim);}
+  .dup-v.keep{outline:1px solid var(--amber-dim);}
   .dup-v .r{color:var(--text-dim); font-family:var(--mono);}
   .dup-v .p{font-family:var(--mono); color:var(--text-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .dup-v .s{font-family:var(--mono); text-align:right;}
-  .tag-keep{color:var(--teal); font-size:10px; font-family:var(--mono);}
+  .tag-keep{color:var(--amber); font-size:10px; font-family:var(--mono);}
 
   .empty-state{text-align:center; padding:60px 20px; color:var(--text-faint);}
   .empty-state .big{font-size:32px; margin-bottom:10px;}
@@ -228,7 +233,7 @@
 <div class="shell">
 
   <nav class="sidebar">
-    <div class="brand"><span class="brand-mark">🎞️</span><span class="brand-name">Library Audit</span></div>
+    <div class="brand"><img class="brand-mark" src="/icon.svg" alt=""><span class="brand-name">Library Audit</span></div>
     <div class="brand-sub">Plex storage breakdown</div>
     <div class="spine">
       <div class="spine-size" id="spineTotal">—</div>
@@ -503,7 +508,7 @@ function renderOverview(){
   const libMax = Math.max(moviesSize, tvSize);
   document.getElementById('libBars').innerHTML = `
     <div class="bar-row"><div class="lbl">Movies</div><div class="bar-track"><div class="bar-fill" style="width:${(moviesSize/libMax*100).toFixed(1)}%"></div></div><div class="val">${fmtSize(moviesSize)}</div></div>
-    <div class="bar-row"><div class="lbl">TV Shows</div><div class="bar-track"><div class="bar-fill teal" style="width:${(tvSize/libMax*100).toFixed(1)}%"></div></div><div class="val">${fmtSize(tvSize)}</div></div>
+    <div class="bar-row"><div class="lbl">TV Shows</div><div class="bar-track"><div class="bar-fill amber" style="width:${(tvSize/libMax*100).toFixed(1)}%"></div></div><div class="val">${fmtSize(tvSize)}</div></div>
   `;
 
   document.getElementById('dupSummary').innerHTML = dupItems.length ?
