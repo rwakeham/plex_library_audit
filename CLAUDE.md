@@ -4,7 +4,7 @@ Developer guide for AI-assisted work on Plex Library Audit.
 
 ## Project overview
 
-A LAN-only dashboard showing what is taking up space in the Plex library on Rasputin:
+A self-hosted, LAN-only dashboard showing what is taking up space in a Plex library:
 overview stats, sortable Movies and TV tables, an ncdu-style folder tree, and a duplicates
 panel. Stateless: every number comes live from Plex's API. Python 3.12, FastAPI, httpx, a
 single static HTML page, Docker Compose.
@@ -43,7 +43,7 @@ Without Docker:
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-PLEX_TOKEN=... PLEX_BASE_URL=http://172.16.19.6:32400 .venv/bin/uvicorn app.main:app --port 8300
+PLEX_TOKEN=... PLEX_BASE_URL=http://<plex-host>:32400 .venv/bin/uvicorn app.main:app --port 8300
 .venv/bin/python -m pytest tests/
 ```
 
@@ -55,9 +55,10 @@ PLEX_TOKEN=... PLEX_BASE_URL=http://172.16.19.6:32400 .venv/bin/uvicorn app.main
    asks `PlexClient.library()` in `app/plex.py`, which calls `GET /library/sections`, then
    `/library/sections/{key}/all` for each movie section and `…/all?type=4` (episodes,
    not shows) for each show section, and maps every item with `map_movie`/`map_episode`.
-4. The page wraps the original artifact's render code in `startDashboard(DATA)` and runs
-   it once the array arrives. All aggregation (totals, duplicates, the tree) happens in
-   the browser.
+4. The page's render code lives in `startDashboard(DATA)`, which runs once the array
+   arrives. All aggregation (totals, duplicates, the tree) happens in the browser. The
+   tree's root is the deepest folder all files share (`LIB_ROOT`), worked out from the
+   paths, so it fits any library layout.
 
 Two health endpoints, deliberately separate:
 
@@ -76,11 +77,14 @@ Try again button.
   `Part`s are its files. Some long films are split across two files that are one version
   (The Ten Commandments). Flattening Parts into one list flags them as duplicates.
   `tests/test_plex.py` pins this.
-- **The API schema matches the original artifact's inline `DATA` exactly.** The
-  frontend's render code is the artifact's, unchanged; a field rename breaks it silently.
+- **The API schema is the page's contract.** The render code reads the short field
+  names (`t`, `v`, `sz`, …) directly, so a rename breaks it silently with no error.
   Change the schema and the page together.
-- **Ratings round half up** (`floor(x*10 + 0.5)`), matching JS `Math.round` in the
-  original export. Python's `round()` rounds half to even and would shift some scores by 1.
+- **Nothing about one particular server is hard-coded.** No default Plex URL (every
+  network differs, and `localhost` inside the container is the container itself, so
+  `setup.sh` refuses it). No media path either: the tree root comes from the data.
+  Hard-coded values only surface as wrong output on someone else's server.
+- **Ratings round half up** (`floor(x*10 + 0.5)`), matching JS `Math.round`. Python's `round()` rounds half to even and would shift some scores by 1.
 - **The Plex token only travels as a header** and is never logged. Logs carry only the
   exception type, never the request, so a token can't leak through a URL or an error message.
 - **`/health` must not depend on Plex.** Plex being down is a state the app reports to
@@ -88,8 +92,8 @@ Try again button.
   Plex is restarting. Plex reachability belongs in `/health/deps`.
 - **One uvicorn worker.** The cache is in process memory; a second worker would hold its
   own copy and double the Plex calls.
-- **Sizes are binary (GiB/TiB).** `fmtSize` divides by 1024 to match ncdu and Synology DSM,
-  which is what the owner reads. Do not "fix" it to decimal.
+- **Sizes are binary (GiB/TiB).** `fmtSize` divides by 1024 to match `ncdu` and most NAS
+  interfaces, which is what users compare against. Do not "fix" it to decimal.
 
 ## Common tasks
 
@@ -113,7 +117,7 @@ Run `./setup.sh` and answer yes to "Replace it?". It redeploys afterwards.
 | Variable | Default | Description |
 |---|---|---|
 | `PLEX_TOKEN` | *(required)* | Plex auth token, sent as `X-Plex-Token`. The app refuses to start without it |
-| `PLEX_BASE_URL` | `http://172.16.19.6:32400` | Plex server to read from |
+| `PLEX_BASE_URL` | *(required)* | Plex server to read from, as reached from the Docker host (not `localhost`). The app refuses to start without it |
 | `PORT` | `8300` | Host port the dashboard is published on; `setup.sh` picks the first free one from 8300 |
 | `CACHE_TTL` | `300` | Seconds to keep the library in memory between Plex fetches |
 
@@ -125,17 +129,17 @@ container (`PORT` is used by compose itself for the port mapping).
 Follows the deployment standard carried by the `rw-coding-compliance` skill. Project
 specifics:
 
-- **Lives at** `/home/ryan/plex_library_audit` on Rasputin (`172.16.19.6`), port 8300 by
-  default. No database and no volumes, so the existing restic backup of `/home/ryan`
-  (`.env` included) covers it with no change to the backup script.
+- **State** none beyond `.env` (mode 600; the token, URL and port). No database, no
+  volumes: backing up the checkout's `.env` is enough, and even that can be recreated by
+  re-running `./setup.sh`.
 - **Migrations** none: there is no database.
 - **Host grants** none: no socket, host-path or namespace mounts.
 - **Services** one, `app`. `deploy.sh` waits up to 60 s for `curl -sf /health`
   (liveness, fatal), then checks `/health/deps` once and only warns if Plex is
   unreachable or rejects the token: a deploy succeeds while Plex is down. Compose's
-  healthcheck also uses `/health`. Uptime Kuma should monitor `/health/deps`, so an
+  healthcheck also uses `/health`. Point an uptime monitor at `/health/deps`, so an
   outage or a bad token alerts.
 - **Port selection** `setup.sh` lists ports other containers publish (`docker ps`) and
   listening sockets (`ss`), excludes this project's own container, and offers the first
   free port from 8300. An existing `PORT` in `.env` is kept.
-- **Deployed by** hand only; not in the Pathway deploy agent's allowlist as of 2026-10-02.
+- **Deployed by** hand: `./setup.sh` once, then `./deploy.sh`. Nothing deploys it unattended.

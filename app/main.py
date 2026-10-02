@@ -14,11 +14,11 @@ from app.plex import PlexClient
 
 log = logging.getLogger("plex_library_audit")
 
-PLEX_BASE_URL = os.environ.get("PLEX_BASE_URL", "http://172.16.19.6:32400")
+PLEX_BASE_URL = os.environ.get("PLEX_BASE_URL", "")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "")
 CACHE_TTL = int(os.environ.get("CACHE_TTL", "300"))
-# Health answers are cached briefly so the compose healthcheck and Uptime Kuma do not
-# each hit Plex on every probe.
+# /health/deps answers are cached briefly so an uptime monitor polling it does not hit
+# Plex on every probe.
 HEALTH_TTL = 15
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -51,8 +51,8 @@ class State:
 def create_app(client=None):
     @asynccontextmanager
     async def lifespan(app):
-        if client is None and not PLEX_TOKEN:
-            raise RuntimeError("PLEX_TOKEN is not set; run ./setup.sh")
+        if client is None and not (PLEX_TOKEN and PLEX_BASE_URL):
+            raise RuntimeError("PLEX_TOKEN and PLEX_BASE_URL must both be set; run ./setup.sh")
         app.state.s = State(client or PlexClient(PLEX_BASE_URL, PLEX_TOKEN))
         yield
         await app.state.s.client.aclose()

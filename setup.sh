@@ -44,7 +44,6 @@ _env_set() {
 }
 
 DEFAULT_PORT=8300
-DEFAULT_PLEX_URL="http://172.16.19.6:32400"
 PROJECT="${COMPOSE_PROJECT_NAME:-$(basename "$REPO_ROOT" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-')}"
 
 # Host ports published by a "docker ps" Ports column, one per line. grep alone is
@@ -116,9 +115,21 @@ else
   fi
 fi
 
+# Plex URL: no default, since it differs on every network. localhost would point the
+# container at itself, so it is refused.
 if [[ -z "$(_env_get PLEX_BASE_URL)" ]]; then
-  read -rp "Plex server URL [${DEFAULT_PLEX_URL}]: " PLEX_URL
-  _env_set PLEX_BASE_URL "${PLEX_URL:-$DEFAULT_PLEX_URL}"
+  while true; do
+    read -rp "Plex server URL, as reached from this host (e.g. http://192.168.1.10:32400): " PLEX_URL
+    PLEX_URL="${PLEX_URL%/}"
+    if [[ ! "$PLEX_URL" =~ ^https?://[^/]+ ]]; then
+      error "Enter a URL starting with http:// or https://"
+    elif [[ "$PLEX_URL" =~ ^https?://(localhost|127\.[0-9.]+)(:|/|$) ]]; then
+      error "localhost would mean the container itself; use the host's LAN IP or name"
+    else
+      break
+    fi
+  done
+  _env_set PLEX_BASE_URL "$PLEX_URL"
 fi
 
 # Port: keep the one already chosen; otherwise find the first free port from 8300.

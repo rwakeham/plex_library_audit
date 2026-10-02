@@ -245,7 +245,7 @@
       <button data-view="tree"><span class="dot"></span>Tree / Size</button>
       <button data-view="dupes"><span class="dot"></span>Duplicates</button>
     </div>
-    <div class="nav-note">Live from Plex, cached for up to 5 minutes · <a href="#" id="refreshLink">refresh now</a><br>Figures use binary GiB/TiB (1024-based), matching ncdu/DSM.</div>
+    <div class="nav-note">Live from Plex, cached for up to 5 minutes · <a href="#" id="refreshLink">refresh now</a><br>Figures use binary GiB/TiB (1024-based), matching ncdu.</div>
   </nav>
 
   <div class="mobile-tabs" id="mobileTabs">
@@ -611,14 +611,29 @@ document.getElementById('searchBox').addEventListener('input', e=>{
 });
 
 /* ================= TREE ================= */
+// The tree starts at the deepest folder every file in the library shares (for example
+// /data/media when Movies and TV live under it), worked out from the paths themselves.
+// It is computed once across the whole library, so the Movies and TV scopes keep the
+// same root. Backslashes are normalised so a Windows Plex server's paths split too.
+function splitPath(p){ return p.replace(/\\/g,'/').split('/').filter(Boolean); }
+const LIB_ROOT = (()=>{
+  let common = null;
+  DATA.forEach(d=>d.v.forEach(ver=>ver.files.forEach(f=>{
+    const dir = splitPath(f.p).slice(0,-1);
+    if(common===null){ common = dir; return; }
+    let i = 0;
+    while(i<common.length && i<dir.length && common[i]===dir[i]) i++;
+    common = common.slice(0,i);
+  })));
+  return common || [];
+})();
 function buildTree(scope){
-  const root = {name:'alexandria', size:0, children:{}, isFile:false};
+  const root = {name: LIB_ROOT[LIB_ROOT.length-1] || '/', size:0, children:{}, isFile:false};
   const src = scope==='all' ? DATA : DATA.filter(d=>d.lib===scope);
   src.forEach(item=>{
     item.v.forEach(ver=>{
       ver.files.forEach(file=>{
-        const rel = file.p.replace(/^\/mnt\/alexandria\//,'');
-        const parts = rel.split('/').filter(Boolean);
+        const parts = splitPath(file.p).slice(LIB_ROOT.length);
         let node = root;
         node.size += file.sz;
         parts.forEach((part,i)=>{
