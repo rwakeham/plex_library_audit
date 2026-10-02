@@ -14,10 +14,12 @@ single static HTML page, Docker Compose.
 ```
 app/                    — the FastAPI application
   __init__.py
-  main.py               — routes (/, /api/library, /health), cache, settings from env
+  main.py               — routes (/, /api/library, /health, icons), cache, settings from env
   plex.py               — Plex client and the Plex → dashboard item mapping
   static/
     index.html          — the dashboard (HTML/CSS/JS in one file), fetches /api/library
+    icon.svg            — app icon (favicon, sidebar mark); its colours set the page palette
+    apple-touch-icon.png — 180 px PNG of the icon for iOS home screens
 tests/
   test_plex.py          — mapping and API tests against a fake Plex
   test_deploy_script.py — deploy.sh behaviour harness, from the rw-coding-compliance skill

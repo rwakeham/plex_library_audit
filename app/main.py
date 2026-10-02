@@ -102,6 +102,14 @@ def create_app(client=None):
     async def index():
         return FileResponse(STATIC_DIR / "index.html")
 
+    @app.get("/icon.svg")
+    async def icon():
+        return FileResponse(STATIC_DIR / "icon.svg", media_type="image/svg+xml")
+
+    @app.get("/apple-touch-icon.png")
+    async def apple_touch_icon():
+        return FileResponse(STATIC_DIR / "apple-touch-icon.png", media_type="image/png")
+
     return app
 
 
