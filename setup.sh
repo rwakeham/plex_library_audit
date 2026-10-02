@@ -92,6 +92,7 @@ success "Docker, Compose v2 and the daemon are available"
 
 header "Configuration"
 [[ -f .env ]] || touch .env
+chmod 600 .env  # it holds the Plex token
 
 # Plex token: prompt on first run, offer to replace on re-run, never echo it.
 if [[ -z "$(_env_get PLEX_TOKEN)" ]]; then

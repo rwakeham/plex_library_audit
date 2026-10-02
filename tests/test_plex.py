@@ -78,11 +78,14 @@ class FakePlex:
     def __init__(self):
         self.calls = []
         self.fail = False
+        self.reject = False
 
     def __call__(self, request):
         self.calls.append(request)
         if self.fail:
             raise httpx.ConnectError("down")
+        if self.reject:
+            return httpx.Response(401)
         assert request.headers["X-Plex-Token"] == "tok"
         assert request.headers["Accept"] == "application/json"
         path = request.url.path
@@ -132,17 +135,41 @@ def test_library_502_when_plex_down(client, plex):
     plex.fail = True
     r = client.get("/api/library")
     assert r.status_code == 502
+    assert "Can't reach Plex" in r.json()["error"]
     assert "tok" not in r.text
 
 
-def test_health(client, plex):
-    assert client.get("/health").status_code == 200
-    plex.fail = True
+def test_library_names_a_rejected_token(client, plex):
+    plex.reject = True
+    r = client.get("/api/library")
+    assert r.status_code == 502
+    assert "rejected the token" in r.json()["error"]
+
+
+@pytest.fixture
+def no_health_cache():
     main.HEALTH_TTL, saved = 0, main.HEALTH_TTL
-    try:
-        assert client.get("/health").status_code == 503
-    finally:
-        main.HEALTH_TTL = saved
+    yield
+    main.HEALTH_TTL = saved
+
+
+def test_health_is_liveness_only(client, plex):
+    # A deploy must succeed while Plex is down: /health does not call Plex at all.
+    plex.fail = True
+    n = len(plex.calls)
+    r = client.get("/health")
+    assert r.status_code == 200 and r.json() == {"status": "ok"}
+    assert len(plex.calls) == n
+
+
+def test_health_deps_reports_plex(client, plex, no_health_cache):
+    r = client.get("/health/deps")
+    assert r.status_code == 200 and r.json() == {"plex": "ok"}
+    plex.fail = True
+    r = client.get("/health/deps")
+    assert r.status_code == 503 and r.json() == {"plex": "unreachable"}
+    plex.fail, plex.reject = False, True
+    assert client.get("/health/deps").json() == {"plex": "unauthorized"}
 
 
 def test_index_served(client):

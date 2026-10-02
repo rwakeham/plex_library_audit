@@ -23,6 +23,20 @@ HEALTH_TTL = 15
 
 STATIC_DIR = Path(__file__).parent / "static"
 
+# Shown to the user on the page, so each names the fix. The token is never included.
+PLEX_ERRORS = {
+    "unauthorized": "Plex rejected the token. Run ./setup.sh on the server to replace it.",
+    "unreachable": f"Can't reach Plex at {PLEX_BASE_URL}. Check that the Plex server is running.",
+    "error": "Plex returned an error. Check the Plex server, then try again.",
+}
+
+
+def plex_status(exc):
+    """Classify a failed Plex call as unauthorized, unreachable or error."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return "unauthorized" if exc.response.status_code in (401, 403) else "error"
+    return "unreachable"
+
 
 class State:
     def __init__(self, client):
@@ -30,7 +44,7 @@ class State:
         self.library = None
         self.library_at = 0.0
         self.library_lock = asyncio.Lock()
-        self.health_ok = False
+        self.plex_status = "unknown"
         self.health_at = 0.0
 
 
@@ -55,27 +69,34 @@ def create_app(client=None):
                 try:
                     s.library = await s.client.library()
                 except httpx.HTTPError as exc:
-                    s.health_ok, s.health_at = False, time.monotonic()
+                    s.plex_status, s.health_at = plex_status(exc), time.monotonic()
                     log.warning("Plex request failed: %s", type(exc).__name__)
-                    return JSONResponse({"error": "Plex did not answer"}, status_code=502)
+                    return JSONResponse({"error": PLEX_ERRORS[s.plex_status]}, status_code=502)
                 s.library_at = time.monotonic()
-                s.health_ok, s.health_at = True, s.library_at
+                s.plex_status, s.health_at = "ok", s.library_at
         return s.library
 
     @app.get("/health")
-    async def health(response: Response):
+    async def health():
+        # Liveness only: the app is up and serving. Deliberately independent of Plex,
+        # so a deploy (and the compose healthcheck) succeeds while Plex is down; the
+        # page then shows the Plex error itself. Plex reachability is /health/deps.
+        return {"status": "ok"}
+
+    @app.get("/health/deps")
+    async def health_deps(response: Response):
         s = app.state.s
         if time.monotonic() - s.health_at >= HEALTH_TTL:
             try:
                 await s.client.sections()
-                s.health_ok = True
+                s.plex_status = "ok"
             except httpx.HTTPError as exc:
                 log.warning("Plex health check failed: %s", type(exc).__name__)
-                s.health_ok = False
+                s.plex_status = plex_status(exc)
             s.health_at = time.monotonic()
-        if not s.health_ok:
+        if s.plex_status != "ok":
             response.status_code = 503
-        return {"status": "ok" if s.health_ok else "plex unreachable"}
+        return {"plex": s.plex_status}
 
     @app.get("/")
     async def index():

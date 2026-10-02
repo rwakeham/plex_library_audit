@@ -173,9 +173,14 @@ wait_for() {
   done
   success "${name} is ready"
 }
-# /health answers 200 only once the app has reached Plex with the configured token,
-# so this proves the app booted and the token works.
-wait_for "App (and Plex)" "curl -sf http://localhost:${PORT}/health" 60
+# /health is liveness only and does not touch Plex, so the deploy succeeds while Plex
+# is down; the page shows that error itself. Plex is checked once, below, as a warning.
+wait_for "App" "curl -sf http://localhost:${PORT}/health" 60
+if curl -sf "http://localhost:${PORT}/health/deps" >/dev/null; then
+  success "Plex is reachable with the configured token"
+else
+  warn "Plex is not reachable right now, or rejected the token; the dashboard will show the error (detail: curl http://localhost:${PORT}/health/deps)"
+fi
 
 header "Done"
 LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')" || LAN_IP=""

@@ -33,8 +33,9 @@ to replace the token.
 
 With exactly one `claude/*` branch ahead of `main`, `deploy.sh` merges it without asking.
 With several, it prompts, or fails asking for `--branch` when there is no terminal. With
-none, it deploys `origin/main`. The deploy succeeds only once `/health` reports that the
-app can reach Plex.
+none, it deploys `origin/main`. The deploy waits for the app to answer `/health`. It
+then checks Plex once, and only warns if Plex is down: the deploy still succeeds, and the
+dashboard shows the Plex error until Plex is back.
 
 To apply a `.env` change, run `./deploy.sh --skip-git`. Restarting the container does
 not re-read `.env`, and starting it by hand skips the health check.
@@ -44,8 +45,9 @@ not re-read `.env`, and starting it by hand skips the health check.
 | Path | What |
 |---|---|
 | `/` | The dashboard |
-| `/api/library` | Every movie and episode as JSON; `?refresh=1` bypasses the cache |
-| `/health` | 200 when Plex answers with the configured token, 503 otherwise |
+| `/api/library` | Every movie and episode as JSON; `?refresh=1` bypasses the cache; 502 with an `error` message if Plex fails |
+| `/health` | Liveness: 200 whenever the app is up, whatever Plex's state |
+| `/health/deps` | 200 `{"plex":"ok"}` when Plex answers with the token; 503 with `unreachable` or `unauthorized` otherwise. Monitor this one in Uptime Kuma |
 
 ## Configuration
 

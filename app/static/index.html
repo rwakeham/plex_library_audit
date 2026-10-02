@@ -384,16 +384,29 @@
 async function loadLibrary(refresh){
   const pill = document.getElementById('topCount');
   pill.textContent = 'Loading library from Plex…';
+  let data;
   try{
     const res = await fetch('/api/library' + (refresh ? '?refresh=1' : ''));
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    startDashboard(await res.json());
+    const body = await res.json().catch(()=>null);
+    if(!res.ok) throw new Error(body?.error || `The server answered HTTP ${res.status}.`);
+    data = body;
   }catch(err){
-    pill.textContent = '';
-    document.querySelector('.content').innerHTML =
-      `<div class="empty-state"><div class="big">⚠</div>Couldn't load the library from Plex (${err.message}).<br>Check that Plex is up, then reload.</div>`;
+    showLoadError(err instanceof TypeError ? "Can't reach the Library Audit server." : err.message);
+    return;
   }
+  startDashboard(data);
 }
+function showLoadError(message){
+  document.getElementById('topCount').textContent = 'Plex unavailable';
+  document.getElementById('spineTotal').textContent = '—';
+  document.querySelector('.content').innerHTML =
+    `<div class="empty-state"><div class="big">⚠</div>
+       <p style="color:var(--text); font-size:15px; margin:0 0 6px;">Couldn't load the library</p>
+       <p style="margin:0 0 18px;">${esc(message)}</p>
+       <button class="btn" onclick="location.href='/?refresh=1'">Try again</button>
+     </div>`;
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 document.getElementById('refreshLink').addEventListener('click', e=>{
   e.preventDefault();
   location.href = '/?refresh=1';

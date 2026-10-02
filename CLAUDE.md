@@ -59,9 +59,16 @@ PLEX_TOKEN=... PLEX_BASE_URL=http://172.16.19.6:32400 .venv/bin/uvicorn app.main
    it once the array arrives. All aggregation (totals, duplicates, the tree) happens in
    the browser.
 
-`/health` calls `/library/sections` (cached for 15 s) and answers 200 only if Plex
-answered with the configured token, otherwise 503. A successful `/api/library` fetch also
-marks Plex healthy.
+Two health endpoints, deliberately separate:
+
+- `/health` is liveness only: 200 whenever the app is serving. It never calls Plex.
+- `/health/deps` calls `/library/sections` (cached for 15 s) and returns
+  `{"plex": "ok"}` with 200, or 503 with `"unreachable"` or `"unauthorized"` (or
+  `"error"`/`"unknown"`). A successful `/api/library` fetch also updates it.
+
+When Plex fails, `/api/library` returns 502 with `{"error": "<message>"}`. The message
+comes from `PLEX_ERRORS` in `app/main.py` and names the fix. The page shows it with a
+Try again button.
 
 ## Key conventions
 
@@ -76,6 +83,9 @@ marks Plex healthy.
   original export. Python's `round()` rounds half to even and would shift some scores by 1.
 - **The Plex token only travels as a header** and is never logged. Logs carry only the
   exception type, never the request, so a token can't leak through a URL or an error message.
+- **`/health` must not depend on Plex.** Plex being down is a state the app reports to
+  the user, not a broken deploy. Tying liveness to Plex would fail every deploy run while
+  Plex is restarting. Plex reachability belongs in `/health/deps`.
 - **One uvicorn worker.** The cache is in process memory; a second worker would hold its
   own copy and double the Plex calls.
 - **Sizes are binary (GiB/TiB).** `fmtSize` divides by 1024 to match ncdu and Synology DSM,
@@ -120,10 +130,11 @@ specifics:
   (`.env` included) covers it with no change to the backup script.
 - **Migrations** none: there is no database.
 - **Host grants** none: no socket, host-path or namespace mounts.
-- **Services** one, `app`. `deploy.sh` waits up to 60 s for `curl -sf /health`, which
-  passes only once the app has reached Plex with the configured token, so a deploy fails
-  if Plex is down or the token is wrong. Compose also runs a healthcheck against
-  `/health`, and Uptime Kuma should monitor the same URL.
+- **Services** one, `app`. `deploy.sh` waits up to 60 s for `curl -sf /health`
+  (liveness, fatal), then checks `/health/deps` once and only warns if Plex is
+  unreachable or rejects the token: a deploy succeeds while Plex is down. Compose's
+  healthcheck also uses `/health`. Uptime Kuma should monitor `/health/deps`, so an
+  outage or a bad token alerts.
 - **Port selection** `setup.sh` lists ports other containers publish (`docker ps`) and
   listening sockets (`ss`), excludes this project's own container, and offers the first
   free port from 8300. An existing `PORT` in `.env` is kept.
