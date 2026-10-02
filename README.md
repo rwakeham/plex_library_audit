@@ -77,3 +77,7 @@ not re-read `.env`, and starting it by hand skips the health check.
 pip install -r requirements-dev.txt
 python -m pytest tests/
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

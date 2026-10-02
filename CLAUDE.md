@@ -28,6 +28,7 @@ Dockerfile              — app image
 requirements.txt        — runtime Python dependencies
 requirements-dev.txt    — adds pytest
 .env.example            — every variable, with placeholders
+LICENSE                 — MIT
 ```
 
 ## Running locally
