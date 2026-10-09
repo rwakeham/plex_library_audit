@@ -95,6 +95,9 @@ Try again button.
   Plex is restarting. Plex reachability belongs in `/health/deps`.
 - **One uvicorn worker.** The cache is in process memory; a second worker would hold its
   own copy and double the Plex calls.
+- **One page, two layouts.** Under 760 px wide the sidebar becomes a bottom tab bar and the
+  Movies/TV tables become cards (CSS only, keyed on column order, so a new column needs a
+  matching rule in the `@media(max-width:760px)` block). Check new UI at phone width too.
 - **Sizes are binary (GiB/TiB).** `fmtSize` divides by 1024 to match `ncdu` and most NAS
   interfaces, which is what users compare against. Do not "fix" it to decimal.
 
